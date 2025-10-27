@@ -213,8 +213,7 @@ trading-partition-demo/
 │   └── generate_hourly_data.py        # Sample data generation (includes VIX/SPX)
 ├── scripts/
 │   ├── upload_data_to_s3.py           # S3 data upload
-│   ├── create_ecr_repo.py             # ECR setup
-│   └── test_local*.py                 # Local testing
+│   └── create_ecr_repo.py             # ECR setup
 ├── prefect.yaml                        # 2 deployment definitions
 ├── pyproject.toml                      # Dependencies
 └── Dockerfile                          # K8s container image
