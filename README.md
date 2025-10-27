@@ -323,10 +323,7 @@ prefect deployment run validate-data/validate-data
 trading-partition-demo/
 ├── flows/
 │   ├── orchestrator_flow.py           # Main coordinator
-│   ├── analyze_symbol_flow.py         # Per-symbol analysis with market context
-│   ├── ingest_market_data_flow.py     # Yahoo Finance data fetching
-│   ├── validate_data_flow.py          # Data quality checks
-│   └── aggregate_portfolio_flow.py    # Portfolio-level analytics
+│   └── analyze_symbol_flow.py         # Per-symbol analysis with market context
 ├── input/
 │   └── generate_hourly_data.py        # Sample data generation (includes VIX/SPX)
 ├── scripts/

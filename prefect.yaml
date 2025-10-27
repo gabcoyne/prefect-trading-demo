@@ -36,57 +36,7 @@ pull:
 
 # Deployment definitions
 deployments:
-  # 1. Data Ingestion - Fetch live market data from Yahoo Finance
-  - name: ingest-market-data
-    version: null
-    tags: ["ingestion", "data-pipeline"]
-    description: "Fetch live stock, VIX, and SPX data from Yahoo Finance API"
-    entrypoint: flows/ingest_market_data_flow.py:ingest_market_data
-    parameters:
-      symbols:
-        [
-          "AAPL",
-          "MSFT",
-          "GOOGL",
-          "AMZN",
-          "NVDA",
-          "META",
-          "TSLA",
-          "BRK-B",
-          "V",
-          "UNH",
-        ]
-      interval: "1h"
-      output_stocks_path: "s3://se-demo-raw-data-files/spx_holdings_hourly.parquet"
-      output_vix_path: "s3://se-demo-raw-data-files/vix_hourly.parquet"
-      output_spx_path: "s3://se-demo-raw-data-files/spx_hourly.parquet"
-    work_pool:
-      name: demo_eks
-      work_queue_name: null
-      job_variables:
-        image: "{{ build-image.image }}"
-        image_pull_policy: Always
-    schedules: []
-
-  # 2. Data Validation - Quality checks before processing
-  - name: validate-data
-    version: null
-    tags: ["validation", "data-quality"]
-    description: "Validate data quality: missing values, outliers, market data availability"
-    entrypoint: flows/validate_data_flow.py:validate_data
-    parameters:
-      parquet_path: "s3://se-demo-raw-data-files/spx_holdings_hourly.parquet"
-      vix_path: "s3://se-demo-raw-data-files/vix_hourly.parquet"
-      spx_path: "s3://se-demo-raw-data-files/spx_hourly.parquet"
-    work_pool:
-      name: demo_eks
-      work_queue_name: null
-      job_variables:
-        image: "{{ build-image.image }}"
-        image_pull_policy: Always
-    schedules: []
-
-  # 3. Main Orchestrator - Top-level coordinator
+  # 1. Main Orchestrator - Top-level coordinator
   - name: orchestrator
     version: null
     tags: ["orchestrator", "parent"]
@@ -102,7 +52,7 @@ deployments:
         image_pull_policy: Always
     schedules: []
 
-  # 4. Symbol Flow - Per-contract analysis with market context
+  # 2. Symbol Flow - Per-contract analysis with market context
   - name: analyze-symbol
     version: null
     tags: ["symbol", "analysis", "market-context"]
@@ -110,22 +60,6 @@ deployments:
     entrypoint: flows/analyze_symbol_flow.py:analyze_symbol
     parameters:
       contract: "AAPL"
-    work_pool:
-      name: demo_eks
-      work_queue_name: null
-      job_variables:
-        image: "{{ build-image.image }}"
-        image_pull_policy: Always
-    schedules: []
-
-  # 5. Portfolio Aggregation - Final analytics across all results
-  - name: aggregate-portfolio
-    version: null
-    tags: ["aggregation", "portfolio", "analytics"]
-    description: "Aggregate results and calculate portfolio-level metrics (P&L, Sharpe, win rate)"
-    entrypoint: flows/aggregate_portfolio_flow.py:aggregate_portfolio
-    parameters:
-      output_dir: "s3://se-demo-raw-data-files/trading-results"
     work_pool:
       name: demo_eks
       work_queue_name: null
