@@ -20,6 +20,9 @@ build/
 # Output
 output/
 
+# Data files - pull from S3 instead
+*.parquet
+
 # IDE
 .vscode/
 .idea/

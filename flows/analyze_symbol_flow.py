@@ -191,18 +191,16 @@ def analyze_symbol(
     # Detect environment: if /app exists, we're in K8s container
     is_k8s = os.path.exists("/app") and os.getcwd() == "/app"
 
-    if not is_k8s and os.path.exists("spx_holdings_hourly.parquet"):
-        # Local execution with local files
-        parquet_path = "spx_holdings_hourly.parquet"
-        vix_path = "vix_hourly.parquet"
-        spx_path = "spx_hourly.parquet"
-        output_dir = "output/test_results"
-    else:
-        # Deployed execution (K8s) - always use S3
-        parquet_path = "s3://se-demo-raw-data-files/spx_holdings_hourly.parquet"
-        vix_path = "s3://se-demo-raw-data-files/vix_hourly.parquet"
-        spx_path = "s3://se-demo-raw-data-files/spx_hourly.parquet"
+    # Always pull input data from S3
+    parquet_path = "s3://se-demo-raw-data-files/spx_holdings_hourly.parquet"
+    vix_path = "s3://se-demo-raw-data-files/vix_hourly.parquet"
+    spx_path = "s3://se-demo-raw-data-files/spx_hourly.parquet"
+    
+    # Output directory depends on environment
+    if is_k8s:
         output_dir = "s3://se-demo-raw-data-files/trading-results"
+    else:
+        output_dir = "output/test_results"
 
     # Create contract-specific tags
     flow_tags = [f"contract:{contract}"]

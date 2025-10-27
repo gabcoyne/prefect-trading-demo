@@ -127,10 +127,17 @@ python generate_hourly_data.py
 cd ..
 ```
 
-This creates:
+This creates local parquet files:
 - `spx_holdings_hourly.parquet` - 419 stocks, 28,048 timestamps
 - `vix_hourly.parquet` - Volatility index
 - `spx_hourly.parquet` - S&P 500 index
+
+**Note**: Upload these to S3 before running flows (see step 3). All flows pull data from S3.
+
+```bash
+# Upload to S3
+python scripts/upload_data_to_s3.py
+```
 
 ### 2. Test Locally
 

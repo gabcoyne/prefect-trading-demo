@@ -327,10 +327,10 @@ def validate_data(
 
 
 if __name__ == "__main__":
-    # Test with local paths
+    # Test with S3 paths
     result = validate_data(
-        parquet_path="spx_holdings_hourly.parquet",
-        vix_path="vix_hourly.parquet",
-        spx_path="spx_hourly.parquet",
+        parquet_path="s3://se-demo-raw-data-files/spx_holdings_hourly.parquet",
+        vix_path="s3://se-demo-raw-data-files/vix_hourly.parquet",
+        spx_path="s3://se-demo-raw-data-files/spx_hourly.parquet",
     )
     print(f"\nValidation result: {result}")

@@ -27,7 +27,7 @@ def test_analyze_contract_flow():
     # Run the flow
     result = analyze_contract(
         contract=contract,
-        parquet_path="spx_holdings_hourly.parquet",
+        parquet_path="s3://se-demo-raw-data-files/spx_holdings_hourly.parquet",
         output_dir="output/test_results",
     )
 

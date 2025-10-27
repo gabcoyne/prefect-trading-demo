@@ -15,9 +15,9 @@ def test_time_partition_locally():
     result = analyze_time_partition(
         contract="AAPL",
         timestamp="2024-01-02 09:30:00-05:00",
-        parquet_path="spx_holdings_hourly.parquet",
-        vix_path="vix_hourly.parquet",
-        spx_path="spx_hourly.parquet",
+        parquet_path="s3://se-demo-raw-data-files/spx_holdings_hourly.parquet",
+        vix_path="s3://se-demo-raw-data-files/vix_hourly.parquet",
+        spx_path="s3://se-demo-raw-data-files/spx_hourly.parquet",
         output_dir="output/test_results",
     )
 
@@ -35,9 +35,9 @@ def test_symbol_flow_locally():
     import pandas as pd
 
     contract = "AAPL"
-    parquet_path = "spx_holdings_hourly.parquet"
-    vix_path = "vix_hourly.parquet"
-    spx_path = "spx_hourly.parquet"
+    parquet_path = "s3://se-demo-raw-data-files/spx_holdings_hourly.parquet"
+    vix_path = "s3://se-demo-raw-data-files/vix_hourly.parquet"
+    spx_path = "s3://se-demo-raw-data-files/spx_hourly.parquet"
     output_dir = "output/test_results"
 
     # Load timestamps
