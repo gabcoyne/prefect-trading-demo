@@ -6,6 +6,7 @@ Processes all time slices with market context (VIX, SPX, beta calculation).
 import pandas as pd
 from prefect import flow, task
 from prefect.artifacts import create_table_artifact
+from prefect.runtime import flow_run as runtime_flow_run
 
 
 @task(tags=["load"], log_prints=False)
@@ -168,6 +169,7 @@ def save_and_summarize(contract: str, df: pd.DataFrame, output_dir: str):
 )
 def analyze_symbol(
     contract: str,
+    symbol_index: int = 0,
 ):
     """
     Analyze a single contract across all timestamps with market context.
@@ -181,12 +183,25 @@ def analyze_symbol(
 
     Args:
         contract: Stock contract to analyze
+        symbol_index: Index of this symbol in the batch (for demo purposes)
 
     Returns:
         Summary statistics dictionary
     """
     # Configuration - check if running locally or in K8s
     import os
+    
+    # Demo: Simulate failure on the 8th symbol (index 7) to showcase error handling
+    if symbol_index == 7:
+        flow_run_id = runtime_flow_run.id
+        flow_run_name = runtime_flow_run.name
+        print(f"🔴 DEMO FAILURE: Simulating failure for symbol index {symbol_index} ({contract})")
+        print(f"   Flow Run: {flow_run_name} (ID: {flow_run_id})")
+        print(f"   This demonstrates Prefect's failure handling and retry capabilities")
+        raise RuntimeError(
+            f"Demo failure: Symbol index {symbol_index} ({contract}) failed intentionally. "
+            f"This showcases Prefect's error handling. Configure retries to automatically recover."
+        )
 
     # Detect environment: if /app exists, we're in K8s container
     is_k8s = os.path.exists("/app") and os.getcwd() == "/app"

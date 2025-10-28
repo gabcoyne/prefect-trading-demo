@@ -41,21 +41,23 @@ def load_and_partition_data(parquet_path: str, num_contracts: Optional[int] = No
 
 
 @task(log_prints=False)
-def trigger_symbol_analysis(contract: str):
+def trigger_symbol_analysis(contract: str, symbol_index: int):
     """
     Trigger a symbol analysis flow for a specific contract.
 
     Args:
         contract: Stock contract to analyze
+        symbol_index: Index of this symbol in the batch (for demo failure simulation)
 
     Returns:
         Flow run details
     """
-    # Trigger the symbol deployment with just the contract parameter
+    # Trigger the symbol deployment with contract and index parameters
     flow_run = run_deployment(
         name="analyze-symbol/analyze-symbol",
         parameters={
             "contract": contract,
+            "symbol_index": symbol_index,
         },
         timeout=0,  # Don't wait for completion
     )
@@ -139,8 +141,8 @@ def trading_orchestrator(
     # Trigger symbol flows for each contract (in parallel)
     # Each symbol flow processes all timestamps internally
     flow_runs = []
-    for contract in contracts:
-        flow_run = trigger_symbol_analysis(contract=contract)
+    for idx, contract in enumerate(contracts):
+        flow_run = trigger_symbol_analysis(contract=contract, symbol_index=idx)
         flow_runs.append(flow_run)
 
     print(f"\n{'='*60}")
