@@ -7,6 +7,7 @@ import pandas as pd
 from prefect import flow, task
 from prefect.artifacts import create_table_artifact
 from prefect.runtime import flow_run as runtime_flow_run
+from prefect_aws import S3Bucket
 
 
 @task(tags=["load"], log_prints=False)
@@ -107,14 +108,14 @@ def analyze_with_market_context(contract: str, df: pd.DataFrame):
 
 
 @task(tags=["save"], log_prints=False)
-def save_and_summarize(contract: str, df: pd.DataFrame, output_dir: str):
+async def save_and_summarize(contract: str, df: pd.DataFrame, use_s3: bool = False):
     """
-    Save results and create summary artifact.
+    Save results and create summary artifact using S3 block or local storage.
 
     Args:
         contract: Stock contract
         df: Analysis results
-        output_dir: Output directory
+        use_s3: Whether to save to S3 (True) or local storage (False)
 
     Returns:
         Output path and summary stats
@@ -128,18 +129,36 @@ def save_and_summarize(contract: str, df: pd.DataFrame, output_dir: str):
     avg_vix = df["VIX"].mean()
 
     # Save to parquet
-    output_path = f"{output_dir}/{contract}_analysis.parquet"
+    filename = f"{contract}_analysis.parquet"
 
-    if output_dir.startswith("s3://"):
-        df.to_parquet(output_path, engine="pyarrow", compression="snappy", index=False)
-    else:
+    if use_s3:
+        # Use S3 block for results storage
+        s3_block = await S3Bucket.load("trading-demo-results")
+        
+        # Write to temporary file then upload
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.parquet') as tmp:
+            df.to_parquet(tmp.name, engine="pyarrow", compression="snappy", index=False)
+            tmp_path = tmp.name
+        
+        # Upload to S3
+        s3_block.upload_from_path(from_path=tmp_path, to_path=filename)
+        
+        # Clean up temp file
         import os
-
+        os.unlink(tmp_path)
+        
+        output_path = f"s3://{s3_block.bucket_name}/{s3_block.bucket_folder}/{filename}".replace("//", "/")
+    else:
+        # Save locally
+        import os
+        output_dir = "output/test_results"
         os.makedirs(output_dir, exist_ok=True)
+        output_path = f"{output_dir}/{filename}"
         df.to_parquet(output_path, engine="pyarrow", compression="snappy", index=False)
 
     # Create artifact
-    create_table_artifact(
+    await create_table_artifact(
         key=f"{contract.lower()}-analysis-summary",
         table={
             "Contract": [contract],
@@ -166,8 +185,9 @@ def save_and_summarize(contract: str, df: pd.DataFrame, output_dir: str):
     flow_run_name="analyze-{contract}",
     persist_result=True,
     log_prints=False,
+    result_storage="s3-bucket/trading-demo-results",
 )
-def analyze_symbol(
+async def analyze_symbol(
     contract: str,
     symbol_index: int = 0,
 ):
@@ -195,27 +215,18 @@ def analyze_symbol(
     if symbol_index == 7:
         flow_run_id = runtime_flow_run.id
         flow_run_name = runtime_flow_run.name
-        print(f"🔴 DEMO FAILURE: Simulating failure for symbol index {symbol_index} ({contract})")
-        print(f"   Flow Run: {flow_run_name} (ID: {flow_run_id})")
-        print(f"   This demonstrates Prefect's failure handling and retry capabilities")
         raise RuntimeError(
-            f"Demo failure: Symbol index {symbol_index} ({contract}) failed intentionally. "
-            f"This showcases Prefect's error handling. Configure retries to automatically recover."
+            f"Simulated failure for demo purposes: {contract} (index {symbol_index}). "
+            f"Flow run: {flow_run_name} ({flow_run_id})"
         )
 
     # Detect environment: if /app exists, we're in K8s container
     is_k8s = os.path.exists("/app") and os.getcwd() == "/app"
 
-    # Always pull input data from S3
+    # Always pull input data from S3 (using hardcoded paths since we're just reading)
     parquet_path = "s3://se-demo-raw-data-files/spx_holdings_hourly.parquet"
     vix_path = "s3://se-demo-raw-data-files/vix_hourly.parquet"
     spx_path = "s3://se-demo-raw-data-files/spx_hourly.parquet"
-    
-    # Output directory depends on environment
-    if is_k8s:
-        output_dir = "s3://se-demo-raw-data-files/trading-results"
-    else:
-        output_dir = "output/test_results"
 
     # Create contract-specific tags
     flow_tags = [f"contract:{contract}"]
@@ -228,13 +239,14 @@ def analyze_symbol(
     # Task B: Analyze with VIX/SPX/beta
     df_analyzed = analyze_with_market_context.with_options(tags=flow_tags)(contract, df)
 
-    # Task C: Save and summarize
-    result = save_and_summarize.with_options(tags=flow_tags)(
-        contract, df_analyzed, output_dir
+    # Task C: Save and summarize (use S3 block in K8s, local storage otherwise)
+    result = await save_and_summarize.with_options(tags=flow_tags)(
+        contract, df_analyzed, use_s3=is_k8s
     )
 
     return result
 
 
 if __name__ == "__main__":
-    analyze_symbol(contract="AAPL")
+    import asyncio
+    asyncio.run(analyze_symbol(contract="AAPL"))

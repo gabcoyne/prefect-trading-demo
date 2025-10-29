@@ -100,7 +100,7 @@ def generate_hourly_data(input_csv: str, output_parquet: str):
     print(f"Saving to {output_parquet}...")
     hourly_df.to_parquet(output_parquet, engine="pyarrow", compression="snappy")
 
-    print("✓ Done!")
+    print("Done!")
     print(f"\nOutput statistics:")
     print(f"  - Records: {len(hourly_df)}")
     print(f"  - Stocks: {len(stock_columns)}")
@@ -158,7 +158,7 @@ def generate_market_indices(input_csv: str, output_vix: str, output_spx: str):
     spx_df = pd.DataFrame(spx_records)
     spx_df = spx_df.set_index("timestamp")
     spx_df.to_parquet(output_spx, engine="pyarrow", compression="snappy")
-    print(f"✓ Saved SPX data to {output_spx} ({len(spx_df)} records)")
+    print(f"Saved SPX data to {output_spx} ({len(spx_df)} records)")
 
     # Generate simulated VIX data (volatility index)
     # VIX typically ranges from 10-40, with mean around 15-20
@@ -196,8 +196,8 @@ def generate_market_indices(input_csv: str, output_vix: str, output_spx: str):
     vix_df = pd.DataFrame(vix_records)
     vix_df = vix_df.set_index("timestamp")
     vix_df.to_parquet(output_vix, engine="pyarrow", compression="snappy")
-    print(f"✓ Saved VIX data to {output_vix} ({len(vix_df)} records)")
-    print(f"  VIX range: {vix_df['VIX'].min():.2f} to {vix_df['VIX'].max():.2f}")
+    print(f"Saved VIX data to {output_vix} ({len(vix_df)} records)")
+    print(f"VIX range: {vix_df['VIX'].min():.2f} to {vix_df['VIX'].max():.2f}")
 
 
 if __name__ == "__main__":

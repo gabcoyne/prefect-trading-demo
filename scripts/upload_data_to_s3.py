@@ -1,88 +1,60 @@
-"""
-Helper script to upload parquet data files to S3.
-Run this before deploying to ensure all data files are available in S3.
-"""
+"""Upload parquet data files to S3 using Prefect S3 blocks."""
 
-import boto3
 import sys
 from pathlib import Path
+from prefect_aws import S3Bucket
 
 
-def upload_to_s3(
-    local_file: str, bucket: str = "se-demo-raw-data-files", s3_key: str = None
-):
-    """
-    Upload a local parquet file to S3.
+FILES = [
+    "spx_holdings_hourly.parquet",
+    "vix_hourly.parquet",
+    "spx_hourly.parquet",
+]
 
-    Args:
-        local_file: Local path to the parquet file
-        bucket: S3 bucket name
-        s3_key: S3 object key (path in bucket), defaults to filename
-    """
-    # Check if file exists
-    if not Path(local_file).exists():
-        print(f"⚠️  File {local_file} not found, skipping...")
+
+def upload_file(s3_block: S3Bucket, local_path: str, s3_key: str = None):
+    """Upload file to S3 using Prefect S3 block."""
+    path = Path(local_path)
+    
+    if not path.exists():
+        print(f"Skipping {local_path} (not found)")
         return False
-
-    # Use filename as S3 key if not specified
+    
     if s3_key is None:
-        s3_key = Path(local_file).name
-
-    # Get file size
-    file_size = Path(local_file).stat().st_size
-    file_size_mb = file_size / (1024 * 1024)
-
-    print(f"Uploading {local_file} to s3://{bucket}/{s3_key}")
-    print(f"  File size: {file_size_mb:.2f} MB")
-
-    # Upload to S3
-    s3_client = boto3.client("s3")
-
+        s3_key = path.name
+    
+    size_mb = path.stat().st_size / (1024 * 1024)
+    bucket_path = f"{s3_block.bucket_name}/{s3_block.bucket_folder}/{s3_key}".replace("//", "/")
+    print(f"Uploading {local_path} ({size_mb:.1f} MB) -> s3://{bucket_path}")
+    
     try:
-        s3_client.upload_file(
-            local_file,
-            bucket,
-            s3_key,
-            ExtraArgs={"ContentType": "application/octet-stream"},
-        )
-        print(f"  ✓ Successfully uploaded to s3://{bucket}/{s3_key}")
+        s3_block.upload_from_path(from_path=local_path, to_path=s3_key)
         return True
     except Exception as e:
-        print(f"  ❌ Error uploading file: {e}")
+        print(f"Failed: {e}")
         return False
 
 
-def upload_all_data_files():
-    """Upload all required data files to S3."""
-    bucket = "se-demo-raw-data-files"
-
-    files_to_upload = [
-        "spx_holdings_hourly.parquet",  # Stock prices
-        "vix_hourly.parquet",  # Volatility index
-        "spx_hourly.parquet",  # S&P 500 index
-    ]
-
-    print("=" * 60)
-    print("Uploading Trading Data Files to S3")
-    print("=" * 60)
-    print(f"Target bucket: s3://{bucket}/")
-    print()
-
-    success_count = 0
-    for filename in files_to_upload:
-        if upload_to_s3(filename, bucket, filename):
-            success_count += 1
-        print()
-
-    print("=" * 60)
-    print(f"Upload complete: {success_count}/{len(files_to_upload)} files uploaded")
-    print("=" * 60)
-
-    if success_count < len(files_to_upload):
-        print("\n⚠️  Some files were not uploaded. Generate missing files with:")
-        print("    cd input && python generate_hourly_data.py")
+def main():
+    # Load S3 block
+    try:
+        s3_block = S3Bucket.load_sync(name="trading-demo-input")
+    except ValueError:
+        print("Error: S3 block 'trading-demo-input' not found.")
+        print("Create it first with: python scripts/create_s3_blocks.py")
+        sys.exit(1)
+    
+    bucket_path = f"{s3_block.bucket_name}/{s3_block.bucket_folder}".rstrip("/")
+    print(f"Uploading to s3://{bucket_path}/\n")
+    
+    uploaded = sum(1 for f in FILES if upload_file(s3_block, f))
+    
+    print(f"\nComplete: {uploaded}/{len(FILES)} files uploaded")
+    
+    if uploaded < len(FILES):
+        print("\nGenerate missing files with: cd input && python generate_hourly_data.py")
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    upload_all_data_files()
+    main()

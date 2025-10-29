@@ -61,7 +61,7 @@ prefect deployment run analyze-symbol/analyze-symbol --param contract="AAPL"
 ### 3. Production Patterns
 
 - **Parallel execution**: N K8s jobs running simultaneously
-- **S3 storage**: All inputs from S3, outputs to S3 (K8s) or local (dev)
+- **S3 storage**: Prefect S3 blocks for data and results management
 - **Result persistence**: Parquet files with full analysis results
 - **Simple parameters**: Just `num_contracts` or `contract`
 
@@ -86,12 +86,23 @@ This creates local parquet files:
 - `vix_hourly.parquet` - Volatility index
 - `spx_hourly.parquet` - S&P 500 index
 
-Upload to S3 (all flows pull data from S3):
+### 2. Create S3 Blocks
+
+Create Prefect S3 blocks for data storage:
+```bash
+python scripts/create_s3_blocks.py
+```
+
+This creates two S3 blocks:
+- `trading-demo-input` - For raw data files (spx_holdings, vix, spx)
+- `trading-demo-results` - For analysis output files
+
+Upload data to S3 (all flows pull data from S3):
 ```bash
 python scripts/upload_data_to_s3.py
 ```
 
-### 2. Test Locally
+### 3. Test Locally
 
 ```bash
 # Install dependencies
@@ -104,7 +115,7 @@ python flows/analyze_symbol_flow.py
 ls -lh output/test_results/AAPL_analysis.parquet
 ```
 
-### 3. Deploy to K8s
+### 4. Deploy to K8s
 
 ```bash
 # Create ECR repository (first time only)
@@ -119,7 +130,7 @@ aws ecr get-login-password --region us-east-2 | \
 prefect deploy --all
 ```
 
-### 4. Run the Pipeline
+### 5. Run the Pipeline
 
 ```bash
 # Process 10 symbols (default)
